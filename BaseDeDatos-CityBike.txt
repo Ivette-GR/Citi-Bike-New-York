@@ -1,0 +1,100 @@
+-----Limpieza de base de datos-----
+SELECT
+tripduration/60 AS tripduration_minutos,
+FORMAT_DATETIME('%F', starttime) AS start_date,
+FORMAT_DATETIME('%T', starttime) AS start_time,
+FORMAT_DATETIME('%F', stoptime) AS stop_date,
+FORMAT_DATETIME('%T', stoptime) AS stop_time,
+start_station_id,
+start_station_name,
+start_station_latitude,
+start_station_longitude,
+end_station_id,
+end_station_name,
+end_station_latitude,
+end_station_longitude,
+bikeid,
+usertype,
+birth_year,
+2023-birth_year AS age,
+gender,
+customer_plan
+FROM `bigquery-public-data.new_york_citibike.citibike_trips` 
+WHERE (birth_year IS NULL OR birth_year IS NOT NULL) AND tripduration IS NOT NULL 
+
+------Limpieza de datos y creación de nueva variables----
+SELECT *, SUBSTR(start_date,1,4) AS year,
+CASE
+        WHEN age >= 18 AND age <= 25 THEN 'Young 18-25'
+        WHEN age >= 26 AND age <= 35 THEN 'Young adult 26-35'
+        WHEN age >= 36 AND age <= 50 THEN 'Middle Adults 36-50'
+        WHEN age >= 51 AND age <= 65 THEN 'Older Adults 51-65'
+        WHEN age >= 66 AND age <= 90 THEN 'Elderly 66-90'
+        ELSE 'Otro'
+        END AS age_category
+FROM `citi-bike-412123.bike.Tabla_general`
+WHERE (age<=90) 
+
+-------Metricas de uso--------
+SELECT 
+ STDDEV(tripduration_minutos) as Desviacion_estandar,
+ AVG(tripduration_minutos) AS promedio,
+ MAX(tripduration_minutos) AS maximo,
+ MIN(tripduration_minutos) AS minimo,
+  FROM `citi-bike-412123.bike.Tabla` 
+
+---- Promedio de viajes por dia-----
+SELECT
+  fecha,
+  AVG(numero_de_viajes) AS promedio_numero_de_viajes_por_dia,
+  EXTRACT(YEAR FROM DATE(fecha)) AS year
+FROM (
+  SELECT
+    DATE(start_date) AS fecha,
+    COUNT(bikeid) AS numero_de_viajes
+  FROM `citi-bike-412123.bike.Tabla`
+  GROUP BY fecha
+)
+GROUP BY fecha, year;
+
+----Total de viajes---
+SELECT
+  SUM(numero_de_viajes) AS total_de_viajes
+FROM (
+  SELECT
+    DATE(start_date) AS fecha,
+    COUNT(bikeid) AS numero_de_viajes
+  FROM `citi-bike-412123.bike.Tabla`
+  GROUP BY fecha
+)
+
+-----Viajes por edad----
+
+SELECT
+  age,
+  AVG(numero_de_viajes) AS promedio_numero_de_viajes_por_dia
+FROM (
+  SELECT
+    age,
+    COUNT(bikeid) AS numero_de_viajes
+  FROM `citi-bike-412123.bike.Tabla`
+  GROUP BY age
+)
+GROUP BY age;
+
+----Viajes por usuario---
+SELECT
+  gender,
+  age,
+  customer_plan,
+  COUNT(*) AS total_viajes_por_usuario
+FROM
+  `citi-bike-412123.bike.Tabla`
+GROUP BY
+  gender,
+  age,
+  customer_plan
+ORDER BY
+  gender,
+  age,
+  customer_plan;
